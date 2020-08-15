@@ -26,6 +26,8 @@ var/
 
 # Tensorflow Stuff
 tb logs/
+Mnist/GAN/Images/*
+Mnist/GAN/models/*
 
 # Installer logs
 pip-log.txt

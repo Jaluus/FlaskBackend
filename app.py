@@ -3,6 +3,8 @@ from flask import Flask, jsonify, request
 from flask_restful import Resource ,Api, reqparse
 from flask_cors import CORS
 
+import matplotlib.pyplot as plt
+
 import numpy as np
 import tensorflow as tf
 
@@ -13,30 +15,17 @@ api = Api(app)
 app_dir = os.path.dirname(os.path.realpath(__file__))
 CNN_model_path = os.path.join(app_dir, "Mnist", "CNN" , "mnist_CNN_model.h5")
 DNN_model_path = os.path.join(app_dir, "Mnist", "DNN" , "mnist_DNN_model.h5")
+GAN_model_path = os.path.join(app_dir, "Mnist", "GAN" , "mnist_GAN_model.h5")
 
 print("Initialising Models")
 CNN_Model = tf.keras.models.load_model(CNN_model_path)
 DNN_Model = tf.keras.models.load_model(DNN_model_path)
+GAN_Model = tf.keras.models.load_model(GAN_model_path, compile=False)
 print("Models ready")
 
-class Mnist(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument(
-        "network",
-        type=str,
-        required= True,
-        help="You need to define the network"
-    )
-    parser.add_argument(
-        "data",
-        action='append',
-        required= True,
-        help="You need to send data"
-    )
-    
-
+class MnistClassifier(Resource):
     def get(self):
-        return {"Message" : "This is the MNIST Network"}, 200
+        return {"Message" : "This is the MNIST Classifier Network"}, 200
 
     def post(self):   
         reqData = request.get_json()
@@ -47,7 +36,7 @@ class Mnist(Resource):
             Data = None
         
         if Data and isinstance(Data,list) and np.array(Data).shape == (28,28):
-            X = np.array(reqData["data"])
+            X = np.array(Data)
 
             # Expanding dims from (rows,cols) to (samples, rows , cols , channels)
             X_CNN = np.expand_dims(np.expand_dims(X,axis=-1),axis=0)
@@ -67,8 +56,45 @@ class Mnist(Resource):
             return resData, 200
         return { "message" : "You need to pass 'data' as an array in the shape of (28,28) of with all entries need to be Ints or Floats between 0 and 255"}, 400
 
+class MnistGenerator(Resource):
+    def get(self):
+        return {"Message" : "This is the MNIST Generator Network"}, 200
 
-api.add_resource(Mnist, "/api/ML/mnist")
+    def post(self):   
+        reqData = request.get_json()
+        minVal = 100
+        maxVal = -100
+
+        if "latentVector" in reqData:
+            LV = reqData["latentVector"]
+        else:
+            LV = None
+        
+        if LV and isinstance(LV,list) and np.array(LV).shape == (10,):
+            LV = np.array(LV)
+
+            # Expanding dims from (rows,cols) to (samples, rows , cols , channels)
+            LV = np.expand_dims(LV,axis=0)
+            # Generating
+            GenImg = np.array(GAN_Model.predict(LV))
+            GenImg = np.reshape(GenImg,(28,28))
+
+            # get the values between 0 and 1
+            maxVal = np.amax(GenImg)
+            minVal = np.amin(GenImg)
+            deltaValue = maxVal - minVal
+            GenImg = (GenImg - minVal) / deltaValue
+
+            resData = {
+                "message" : "Generation complete",
+                "GANImage" : GenImg.tolist()
+            }
+            return resData, 200
+
+        return { "message" : "You need to pass 'latentVector' as an array in the shape of (10) of with all entries need to be Floats between 0 and 1"}, 400
+
+api.add_resource(MnistClassifier, "/api/ML/mnist/classifier")
+api.add_resource(MnistGenerator, "/api/ML/mnist/generator")
 
 if __name__ == "__main__":
     app.run()
