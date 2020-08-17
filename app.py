@@ -16,11 +16,13 @@ app_dir = os.path.dirname(os.path.realpath(__file__))
 CNN_model_path = os.path.join(app_dir, "Mnist", "CNN" , "mnist_CNN_model.h5")
 DNN_model_path = os.path.join(app_dir, "Mnist", "DNN" , "mnist_DNN_model.h5")
 GAN_model_path = os.path.join(app_dir, "Mnist", "GAN" , "mnist_GAN_model.h5")
+DCGAN_model_path = os.path.join(app_dir, "Mnist", "GAN" , "mnist_DCGAN_model.h5")
 
 print("Initialising Models")
 CNN_Model = tf.keras.models.load_model(CNN_model_path)
 DNN_Model = tf.keras.models.load_model(DNN_model_path)
 GAN_Model = tf.keras.models.load_model(GAN_model_path, compile=False)
+DCGAN_Model = tf.keras.models.load_model(DCGAN_model_path, compile=False)
 print("Models ready")
 
 class MnistClassifier(Resource):
@@ -45,7 +47,7 @@ class MnistClassifier(Resource):
             X_DNN = np.expand_dims(X.flatten(),axis=0)
             
             #  Predicting
-            pred_vector_CNN = (np.array(CNN_Model.predict(X_CNN)))
+            pred_vector_CNN = np.array(CNN_Model.predict(X_CNN))
             pred_vector_DNN = np.array(DNN_Model.predict(X_DNN))
 
             resData = {
@@ -76,18 +78,24 @@ class MnistGenerator(Resource):
             # Expanding dims from (rows,cols) to (samples, rows , cols , channels)
             LV = np.expand_dims(LV,axis=0)
             # Generating
-            GenImg = np.array(GAN_Model.predict(LV))
-            GenImg = np.reshape(GenImg,(28,28))
+            GANImg = np.reshape(np.array(GAN_Model.predict(LV)),(28,28))
+            DCGANImg = np.reshape(np.array(DCGAN_Model.predict(LV)),(28,28))
 
             # get the values between 0 and 1
-            maxVal = np.amax(GenImg)
-            minVal = np.amin(GenImg)
+            maxVal = np.amax(GANImg)
+            minVal = np.amin(GANImg)
             deltaValue = maxVal - minVal
-            GenImg = (GenImg - minVal) / deltaValue
+            GANImg = (GANImg - minVal) / deltaValue
+
+            maxVal = np.amax(DCGANImg)
+            minVal = np.amin(DCGANImg)
+            deltaValue = maxVal - minVal
+            DCGANImg = (DCGANImg - minVal) / deltaValue
 
             resData = {
                 "message" : "Generation complete",
-                "GANImage" : GenImg.tolist()
+                "GANImage" : GANImg.tolist(),
+                "DCGANImage" : DCGANImg.tolist()
             }
             return resData, 200
 
