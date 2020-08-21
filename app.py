@@ -49,11 +49,15 @@ class MnistClassifier(Resource):
             #  Predicting
             pred_vector_CNN = np.array(CNN_Model.predict(X_CNN))
             pred_vector_DNN = np.array(DNN_Model.predict(X_DNN))
+            pred_CNN = { "number" : int(np.argmax(pred_vector_CNN)) , "prob" : int(np.round(np.amax(pred_vector_CNN),2)*100) }
+            pred_DNN = { "number" : int(np.argmax(pred_vector_DNN)) , "prob" : int(np.round(np.amax(pred_vector_DNN),2)*100) }
 
             resData = {
                 "message" : "Prediction complete",
                 "pred_vector_CNN" : pred_vector_CNN.tolist(),
-                "pred_vector_DNN" : pred_vector_DNN.tolist()
+                "pred_CNN" : pred_CNN,
+                "pred_vector_DNN" : pred_vector_DNN.tolist(),
+                "pred_DNN" : pred_DNN,
             }
             return resData, 200
         return { "message" : "You need to pass 'data' as an array in the shape of (28,28) of with all entries need to be Ints or Floats between 0 and 255"}, 400
